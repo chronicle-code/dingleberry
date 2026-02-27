@@ -27,6 +27,19 @@ defmodule Dingleberry.Signals.Middleware.AuditLogger do
     {:cont, signals, %{state | signal_count: state.signal_count + length(signals)}}
   end
 
+  @impl true
+  def after_dispatch(signal, subscriber, result, _context, state) do
+    case result do
+      :ok ->
+        Logger.debug("AuditLogger: Dispatched #{signal.type} to subscriber #{inspect(subscriber.id)}")
+
+      {:error, reason} ->
+        Logger.warning("AuditLogger: Failed dispatching #{signal.type} to subscriber #{inspect(subscriber.id)}: #{inspect(reason)}")
+    end
+
+    {:cont, state}
+  end
+
   defp maybe_record(%{type: "dingleberry.command.decided"} = signal, _state) do
     data = signal.data
 

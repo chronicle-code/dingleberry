@@ -48,7 +48,7 @@ The magic: `Queue.submit/1` **blocks the agent's request in-flight** using Elixi
 
 ```bash
 # Clone it
-git clone https://github.com/dingleberry-ai/dingleberry.git
+git clone https://github.com/chronicle-code/dingleberry.git
 cd dingleberry
 
 # Set up
@@ -126,10 +126,79 @@ When a command needs approval, Dingleberry sends a native OS notification:
 
 So you'll know immediately even if the dashboard isn't in focus.
 
+## Built on Jido
+
+Dingleberry is proudly built on the [Jido](https://github.com/agentjido/jido) ecosystem — an Elixir framework for building autonomous agent systems. We leverage the **full depth** of three core Jido libraries:
+
+### [jido_action](https://hex.pm/packages/jido_action) — Structured Actions with Full Lifecycle
+
+Every operation in Dingleberry is a **Jido Action** with validated input/output schemas, lifecycle hooks, compensation, and LLM tool generation:
+
+| Action | Category | Features |
+|--------|----------|----------|
+| `ClassifyCommand` | policy | `output_schema`, `on_before_validate_params` (trims input), `to_tool()` |
+| `ClassifyToolCall` | policy | `output_schema`, `to_tool()` for LLM function-calling |
+| `ApproveRequest` | approval | `output_schema`, `to_tool()` |
+| `RejectRequest` | approval | `output_schema`, `to_tool()` |
+| `RecordAudit` | audit | `output_schema`, `compensation`, `on_after_run`, `on_error` |
+
+All 5 actions expose `to_tool()` for OpenAI/Claude function-calling integration. The **LLM Tools API** at `/api/v1/tools` lists them as tool definitions and `/api/v1/tools/:name/run` executes them via `Jido.Exec.run` with full validation.
+
+### [jido_signal](https://hex.pm/packages/jido_signal) — CloudEvents Signal Bus with Extensions & Journal
+
+Every interception, classification, and decision flows through a **Jido Signal Bus** as [CloudEvents v1.0.2](https://cloudevents.io/) compliant signals:
+
+- `dingleberry.command.intercepted` — Emitted when a command is caught
+- `dingleberry.command.decided` — Emitted when a human (or auto-policy) makes a decision
+- `dingleberry.policy.matched` — Emitted when a policy rule matches
+
+**Signal Extensions** (via `Jido.Signal.Ext`) attach type-safe metadata to signals:
+
+| Extension | Namespace | Fields |
+|-----------|-----------|--------|
+| `RiskMetadata` | `risk.metadata` | `risk_level`, `risk_score`, `classified_at` |
+| `AuditContext` | `audit.context` | `session_id`, `hostname`, `request_id` |
+| `DecisionContext` | `decision.context` | `decision_time_ms`, `approver_id` |
+
+**ETS Journal** persistence is enabled on the bus for signal replay and debugging. The bus runs a **middleware pipeline** with both publish and dispatch callbacks:
+
+1. **RiskClassifier** — `before_publish` + `before_dispatch` (attaches risk metadata extension)
+2. **AuditLogger** — `after_publish` + `after_dispatch` (records to SQLite, logs dispatch results)
+3. **Logger** — Debug logging via `Jido.Signal.Bus.Middleware.Logger`
+
+### [jido](https://hex.pm/packages/jido) — Core Framework
+
+The Jido core provides `Jido.Exec` for action execution with retries, timeouts, compensation, and telemetry — tying actions and signals together into a cohesive system.
+
+> Jido gave us CloudEvents compliance, a middleware pipeline, signal extensions, ETS journal persistence, and action schemas with LLM tool generation out of the box — so we could focus on the interception logic instead of reinventing event infrastructure.
+
+## LLM Tools API
+
+Dingleberry exposes all actions as LLM-compatible tool definitions:
+
+```bash
+# List all available tools
+curl http://localhost:4000/api/v1/tools
+
+# Get a single tool definition
+curl http://localhost:4000/api/v1/tools/classify_command
+
+# Execute a tool
+curl -X POST http://localhost:4000/api/v1/tools/classify_command/run \
+  -H "Content-Type: application/json" \
+  -d '{"params": {"command": "rm -rf /"}}'
+```
+
+This enables AI agents to discover and invoke Dingleberry's capabilities through standard function-calling protocols.
+
 ## Architecture
 
-Built on Elixir/OTP because this is fundamentally a concurrency problem — you need to hold N agent requests in-flight simultaneously while a human makes decisions asynchronously.
+Built on Elixir/OTP and the Jido ecosystem because this is fundamentally a concurrency problem — you need to hold N agent requests in-flight simultaneously while a human makes decisions asynchronously.
 
+- **Jido Actions** — 5 validated actions with input/output schemas, lifecycle hooks, compensation, and `to_tool()` LLM integration
+- **Jido Signal Bus** — CloudEvents middleware pipeline with extensions, ETS journal, and dispatch callbacks
+- **Signal Extensions** — Type-safe metadata (risk, audit, decision) attached to signals via `Jido.Signal.Ext`
+- **LLM Tools API** — REST endpoints exposing all actions as OpenAI/Claude function-calling tools
 - **Policy Engine** — GenServer with compiled regex patterns from YAML
 - **Approval Queue** — GenServer using deferred `reply/2` to block callers
 - **MCP Proxy** — JSON-RPC 2.0 codec + bidirectional Port to real MCP server

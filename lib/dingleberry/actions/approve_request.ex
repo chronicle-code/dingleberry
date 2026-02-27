@@ -10,6 +10,9 @@ defmodule Dingleberry.Actions.ApproveRequest do
     schema: [
       request_id: [type: :string, required: true, doc: "The approval request ID"],
       decided_by: [type: :string, default: "human", doc: "Who made the decision"]
+    ],
+    output_schema: [
+      decision: [type: :map, required: true, doc: "The approval decision struct as a map"]
     ]
 
   alias Dingleberry.Approval.Queue

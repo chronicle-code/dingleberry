@@ -18,6 +18,9 @@ defmodule Dingleberry.Signals.BusConfig do
   def child_spec(_opts \\ []) do
     Bus.child_spec(
       name: @bus_name,
+      journal_adapter: Jido.Signal.Journal.Adapters.ETS,
+      journal_adapter_opts: [],
+      max_log_size: 100_000,
       middleware: [
         {Dingleberry.Signals.Middleware.RiskClassifier, [log_classifications: true]},
         {Dingleberry.Signals.Middleware.AuditLogger, [log_safe: false]},

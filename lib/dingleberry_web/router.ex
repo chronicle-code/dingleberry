@@ -23,6 +23,15 @@ defmodule DingleberryWeb.Router do
     live "/sessions", SessionsLive, :index
   end
 
+  # LLM Tools API
+  scope "/api/v1", DingleberryWeb.API do
+    pipe_through :api
+
+    get "/tools", ToolsController, :index
+    get "/tools/:name", ToolsController, :show
+    post "/tools/:name/run", ToolsController, :run
+  end
+
   # MCP SSE/HTTP transport endpoints
   scope "/mcp" do
     pipe_through :api
