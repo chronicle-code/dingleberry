@@ -11,6 +11,9 @@ defmodule Dingleberry.Actions.RejectRequest do
       request_id: [type: :string, required: true, doc: "The approval request ID"],
       decided_by: [type: :string, default: "human", doc: "Who made the decision"],
       reason: [type: :string, doc: "Reason for rejection"]
+    ],
+    output_schema: [
+      decision: [type: :map, required: true, doc: "The rejection decision struct as a map"]
     ]
 
   alias Dingleberry.Approval.Queue

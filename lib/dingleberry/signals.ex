@@ -15,6 +15,7 @@ defmodule Dingleberry.Signals do
   def emit_intercepted(attrs) do
     case CommandIntercepted.new(normalize(attrs)) do
       {:ok, signal} ->
+        signal = attach_audit_context(signal, attrs)
         BusConfig.publish(signal)
 
       {:error, reason} ->
@@ -27,6 +28,7 @@ defmodule Dingleberry.Signals do
   def emit_decided(attrs) do
     case CommandDecided.new(normalize(attrs)) do
       {:ok, signal} ->
+        signal = attach_audit_context(signal, attrs)
         BusConfig.publish(signal)
 
       {:error, reason} ->
@@ -45,6 +47,28 @@ defmodule Dingleberry.Signals do
         Logger.warning("Failed to create policy_matched signal: #{inspect(reason)}")
         :ok
     end
+  end
+
+  defp attach_audit_context(signal, attrs) do
+    attrs = normalize(attrs)
+    audit_context = %{
+      session_id: Map.get(attrs, :session_id) || Map.get(attrs, "session_id"),
+      hostname: hostname(),
+      request_id: Map.get(attrs, :request_id) || Map.get(attrs, "request_id") || generate_request_id()
+    }
+
+    Map.update(signal, :extensions, %{"audit.context" => audit_context}, fn exts ->
+      Map.put(exts || %{}, "audit.context", audit_context)
+    end)
+  end
+
+  defp hostname do
+    {:ok, name} = :inet.gethostname()
+    List.to_string(name)
+  end
+
+  defp generate_request_id do
+    Base.hex_encode32(:crypto.strong_rand_bytes(8), case: :lower, padding: false)
   end
 
   defp normalize(attrs) when is_map(attrs), do: attrs

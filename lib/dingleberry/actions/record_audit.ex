@@ -1,6 +1,8 @@
 defmodule Dingleberry.Actions.RecordAudit do
   @moduledoc "Jido Action: Records an audit log entry."
 
+  require Logger
+
   use Jido.Action,
     name: "record_audit",
     description: "Records a command interception event to the audit log",
@@ -16,7 +18,11 @@ defmodule Dingleberry.Actions.RecordAudit do
       session_id: [type: :string, doc: "Proxy session ID"],
       decided_by: [type: :string, doc: "Who made the decision"],
       reason: [type: :string, doc: "Decision reason"]
-    ]
+    ],
+    output_schema: [
+      entry_id: [type: :integer, required: true, doc: "The ID of the created audit entry"]
+    ],
+    compensation: [enabled: true, max_retries: 2, timeout: 5000]
 
   alias Dingleberry.Audit.Log
 
@@ -32,5 +38,19 @@ defmodule Dingleberry.Actions.RecordAudit do
       {:ok, entry} -> {:ok, %{entry_id: entry.id}}
       {:error, changeset} -> {:error, changeset}
     end
+  end
+
+  @impl true
+  def on_after_run({:ok, result} = success) do
+    Logger.debug("RecordAudit: Successfully wrote audit entry ##{result.entry_id}")
+    success
+  end
+
+  def on_after_run(error), do: error
+
+  @impl true
+  def on_error(failed_params, error, _context, _opts) do
+    Logger.warning("RecordAudit: Failed to write audit entry for command=#{inspect(failed_params[:command])}, error=#{inspect(error)}")
+    {:error, error}
   end
 end

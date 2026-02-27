@@ -10,6 +10,11 @@ defmodule Dingleberry.Actions.ClassifyToolCall do
     schema: [
       name: [type: :string, required: true, doc: "The MCP tool name"],
       arguments: [type: :map, default: %{}, doc: "The tool call arguments"]
+    ],
+    output_schema: [
+      risk: [type: :atom, required: true, doc: "Risk level (:safe, :warn, :block)"],
+      rule_name: [type: :string, doc: "Name of the matched policy rule"],
+      description: [type: :string, required: true, doc: "Human-readable tool call description"]
     ]
 
   alias Dingleberry.Policy.Engine, as: PolicyEngine
