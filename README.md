@@ -22,9 +22,9 @@ AI coding agents are getting more powerful and more autonomous. That's great —
 - Deletes your `.env` file
 - Does a `chmod 777` on your SSH keys
 
-These aren't hypotheticals. They're [happening](https://simonwillison.net/2025/Jun/8/you-should-be-scared/) right now, across Claude Code, Cursor, Aider, Replit, and every other agent tool. The trust model is broken: agents request unlimited shell access, and you either grant it or don't use the tool.
+These aren't hypotheticals. A Meta AI safety director [watched an OpenClaw agent delete her entire inbox](https://techcrunch.com/2026/02/23/a-meta-ai-security-researcher-said-an-openclaw-agent-ran-amok-on-her-inbox/) while she screamed "STOP" at it. Microsoft [warns](https://www.microsoft.com/en-us/security/blog/2026/02/19/running-openclaw-safely-identity-isolation-runtime-risk/) that OpenClaw shouldn't run on standard workstations. The trust model is broken: agents request unlimited shell access, and you either grant it or don't use the tool.
 
-**Dingleberry** fills the gap. It's a universal, agent-agnostic interceptor that works with *any* AI coding tool, classifies every action against YAML policy rules, and blocks dangerous operations until a human says "yes."
+**Dingleberry** fills the gap. It's a universal, agent-agnostic interceptor that works with *any* AI coding tool, classifies every action against YAML policy rules, and blocks dangerous operations until a human says "yes." Read the full story: **[Why Dingleberry Exists](docs/why.md)**.
 
 ## How It Works
 
