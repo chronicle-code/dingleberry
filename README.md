@@ -61,21 +61,126 @@ mix dingleberry.init
 mix phx.server
 ```
 
-Open [localhost:4000](http://localhost:4000) and you'll see the dashboard. Now route your AI agent through Dingleberry.
+Open [localhost:4000](http://localhost:4000) and you'll see the dashboard.
 
-### As an MCP Proxy
+### Wire Up Your AI Tool
 
-```bash
-# Wrap any MCP server
-mix dingleberry.proxy --command npx --args "@modelcontextprotocol/server-filesystem /tmp"
+Dingleberry works as an MCP proxy — it wraps your real MCP servers and intercepts tool calls. Pick your tool below and paste the config.
 
-# Point your AI agent at Dingleberry instead of the real server
+<details>
+<summary><strong>Claude Code</strong></summary>
+
+Edit `~/.claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "mix",
+      "args": [
+        "dingleberry.proxy",
+        "--command", "npx",
+        "--args", "@modelcontextprotocol/server-filesystem /home/user/projects"
+      ],
+      "cwd": "/path/to/dingleberry"
+    }
+  }
+}
 ```
+
+Replace `/path/to/dingleberry` with wherever you cloned the repo, and update the filesystem path to your project directory.
+
+</details>
+
+<details>
+<summary><strong>Cursor</strong></summary>
+
+Edit `.cursor/mcp.json` in your project root (or `~/.cursor/mcp.json` for global):
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "mix",
+      "args": [
+        "dingleberry.proxy",
+        "--command", "npx",
+        "--args", "@modelcontextprotocol/server-filesystem /home/user/projects"
+      ],
+      "cwd": "/path/to/dingleberry"
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><strong>Windsurf</strong></summary>
+
+Edit `~/.codeium/windsurf/mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "mix",
+      "args": [
+        "dingleberry.proxy",
+        "--command", "npx",
+        "--args", "@modelcontextprotocol/server-filesystem /home/user/projects"
+      ],
+      "cwd": "/path/to/dingleberry"
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><strong>Cline (VS Code)</strong></summary>
+
+Open VS Code settings (`Cmd+,` / `Ctrl+,`), search for "Cline MCP", click "Edit in settings.json", and add:
+
+```json
+{
+  "cline.mcpServers": {
+    "filesystem": {
+      "command": "mix",
+      "args": [
+        "dingleberry.proxy",
+        "--command", "npx",
+        "--args", "@modelcontextprotocol/server-filesystem /home/user/projects"
+      ],
+      "cwd": "/path/to/dingleberry"
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><strong>Any MCP Client (SSE/HTTP)</strong></summary>
+
+If your client supports SSE transport instead of stdio, point it directly at Dingleberry's HTTP endpoints — no `mix dingleberry.proxy` needed:
+
+```
+SSE endpoint:  http://localhost:4000/mcp/sse
+POST endpoint: http://localhost:4000/mcp/message
+```
+
+Start Dingleberry with `mix phx.server`, then configure your client to connect to the SSE endpoint. Dingleberry will proxy to the real MCP server and intercept tool calls.
+
+</details>
+
+> **Pattern:** The config is always the same — wherever you had `"command": "npx"` pointing at an MCP server, you replace it with `"command": "mix"` pointing at `dingleberry.proxy`, which wraps the original server. Your AI tool talks to Dingleberry, Dingleberry talks to the real server.
 
 ### As a Shell Interceptor
 
 ```bash
-# Interactive mode
+# Interactive mode — classifies every command you type
 mix dingleberry.shell
 
 dingleberry> ls -la          # Auto-approved (safe)
