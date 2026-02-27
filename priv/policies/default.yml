@@ -1,0 +1,235 @@
+# Dingleberry Default Policy
+# Rules are evaluated in order: block > warn > safe
+# Unmatched commands default to "warn" (require approval)
+
+rules:
+  # === BLOCK: Catastrophic / irreversible commands ===
+  - name: rm_root
+    description: "Recursive delete of root or home directory"
+    action: block
+    patterns:
+      - "rm\\s+-rf\\s+/"
+      - "rm\\s+-rf\\s+~"
+      - "rm\\s+-rf\\s+\\$HOME"
+      - "rm\\s+-rf\\s+\\*"
+    scope: shell
+
+  - name: disk_wipe
+    description: "Low-level disk operations"
+    action: block
+    patterns:
+      - "\\bdd\\s+if="
+      - "\\bmkfs\\b"
+      - "\\bformat\\b.*\\b[A-Z]:"
+    scope: shell
+
+  - name: fork_bomb
+    description: "Fork bomb patterns"
+    action: block
+    patterns:
+      - ":\\(\\)\\{\\s*:\\|:&\\s*\\};:"
+      - "\\bfork\\b.*\\bwhile\\b.*\\btrue\\b"
+    scope: shell
+
+  - name: drop_database
+    description: "Database destruction"
+    action: block
+    patterns:
+      - "DROP\\s+DATABASE"
+      - "DROP\\s+SCHEMA.*CASCADE"
+    scope: all
+
+  - name: sql_drop_table
+    description: "Drop table commands"
+    action: block
+    patterns:
+      - "DROP\\s+TABLE"
+    scope: all
+
+  # === WARN: Dangerous but sometimes legitimate ===
+  - name: git_force_push
+    description: "Force push to remote"
+    action: warn
+    patterns:
+      - "git\\s+push\\s+.*--force"
+      - "git\\s+push\\s+-f\\b"
+    scope: shell
+
+  - name: git_reset_hard
+    description: "Hard reset discards changes"
+    action: warn
+    patterns:
+      - "git\\s+reset\\s+--hard"
+    scope: shell
+
+  - name: rm_recursive
+    description: "Recursive delete (non-root)"
+    action: warn
+    patterns:
+      - "rm\\s+-rf\\b"
+      - "rm\\s+-r\\b"
+    scope: shell
+
+  - name: chmod_world_writable
+    description: "World-writable permissions"
+    action: warn
+    patterns:
+      - "chmod\\s+777"
+      - "chmod\\s+-R\\s+777"
+    scope: shell
+
+  - name: curl_pipe_bash
+    description: "Piping remote scripts to shell"
+    action: warn
+    patterns:
+      - "curl.*\\|\\s*(ba)?sh"
+      - "wget.*\\|\\s*(ba)?sh"
+    scope: shell
+
+  - name: sql_destructive
+    description: "Destructive SQL operations"
+    action: warn
+    patterns:
+      - "DELETE\\s+FROM"
+      - "TRUNCATE\\s+"
+      - "ALTER\\s+TABLE.*DROP"
+    scope: all
+
+  - name: kill_processes
+    description: "Forceful process termination"
+    action: warn
+    patterns:
+      - "kill\\s+-9"
+      - "killall\\b"
+      - "pkill\\b"
+    scope: shell
+
+  - name: env_modification
+    description: "Modifying environment files"
+    action: warn
+    patterns:
+      - ">\\.env"
+      - "echo.*>.*\\.env"
+      - "cat.*>.*\\.env"
+    scope: shell
+
+  - name: npm_global_install
+    description: "Global package installation"
+    action: warn
+    patterns:
+      - "npm\\s+install\\s+-g"
+      - "pip\\s+install\\s+"
+      - "gem\\s+install\\s+"
+    scope: shell
+
+  - name: docker_destructive
+    description: "Docker cleanup/removal commands"
+    action: warn
+    patterns:
+      - "docker\\s+system\\s+prune"
+      - "docker\\s+rm\\s+-f"
+      - "docker\\s+rmi"
+    scope: shell
+
+  - name: ssh_commands
+    description: "Remote SSH execution"
+    action: warn
+    patterns:
+      - "ssh\\s+.*@"
+    scope: shell
+
+  - name: file_system_write
+    description: "MCP file system write operations"
+    action: warn
+    patterns:
+      - "write_file"
+      - "create_file"
+      - "delete_file"
+      - "rename_file"
+    scope: mcp
+
+  # === SAFE: Read-only / harmless commands ===
+  - name: file_listing
+    description: "List files and directories"
+    action: safe
+    patterns:
+      - "^ls\\b"
+      - "^dir\\b"
+      - "^tree\\b"
+    scope: shell
+
+  - name: file_reading
+    description: "Read file contents"
+    action: safe
+    patterns:
+      - "^cat\\b"
+      - "^head\\b"
+      - "^tail\\b"
+      - "^less\\b"
+      - "^more\\b"
+      - "^bat\\b"
+    scope: shell
+
+  - name: search_commands
+    description: "Search and find operations"
+    action: safe
+    patterns:
+      - "^grep\\b"
+      - "^rg\\b"
+      - "^find\\b"
+      - "^fd\\b"
+      - "^ag\\b"
+      - "^ack\\b"
+    scope: shell
+
+  - name: info_commands
+    description: "System information commands"
+    action: safe
+    patterns:
+      - "^echo\\b"
+      - "^pwd$"
+      - "^whoami$"
+      - "^hostname$"
+      - "^uname\\b"
+      - "^date$"
+      - "^which\\b"
+      - "^type\\b"
+    scope: shell
+
+  - name: git_read_only
+    description: "Read-only git operations"
+    action: safe
+    patterns:
+      - "^git\\s+status"
+      - "^git\\s+diff"
+      - "^git\\s+log"
+      - "^git\\s+show"
+      - "^git\\s+branch$"
+      - "^git\\s+branch\\s+-[avr]"
+      - "^git\\s+remote\\s+-v"
+      - "^git\\s+stash\\s+list"
+    scope: shell
+
+  - name: build_commands
+    description: "Common build/test commands"
+    action: safe
+    patterns:
+      - "^mix\\s+(compile|test|format|deps\\.get|ecto\\.migrate)"
+      - "^npm\\s+(test|run|start)"
+      - "^yarn\\s+(test|run|start)"
+      - "^cargo\\s+(build|test|check|clippy)"
+      - "^go\\s+(build|test|vet)"
+      - "^make\\b"
+    scope: shell
+
+  - name: mcp_read_only
+    description: "Read-only MCP tool calls"
+    action: safe
+    patterns:
+      - "read_file"
+      - "list_directory"
+      - "search_files"
+      - "get_"
+      - "list_"
+      - "describe_"
+    scope: mcp

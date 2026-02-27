@@ -1,0 +1,22 @@
+defmodule Dingleberry.Actions.ClassifyCommand do
+  @moduledoc "Jido Action: Classifies a shell command against the policy engine."
+
+  use Jido.Action,
+    name: "classify_command",
+    description: "Classifies a shell command against YAML policy rules",
+    category: "policy",
+    tags: ["classification", "shell", "policy"],
+    vsn: "1.0.0",
+    schema: [
+      command: [type: :string, required: true, doc: "The shell command to classify"],
+      scope: [type: :atom, default: :shell, doc: "Classification scope (:shell, :mcp, :all)"]
+    ]
+
+  alias Dingleberry.Policy.Engine, as: PolicyEngine
+
+  @impl true
+  def run(params, _context) do
+    {:ok, risk, rule_name} = PolicyEngine.classify(params.command, scope: params.scope)
+    {:ok, %{risk: risk, rule_name: rule_name, command: params.command}}
+  end
+end
