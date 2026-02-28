@@ -7,7 +7,7 @@ defmodule Dingleberry.Signals do
   (RiskClassifier -> AuditLogger -> Logger).
   """
 
-  alias Dingleberry.Signals.{BusConfig, CommandIntercepted, CommandDecided, PolicyMatched}
+  alias Dingleberry.Signals.{BusConfig, CommandIntercepted, CommandDecided, PolicyMatched, LLMClassified}
 
   require Logger
 
@@ -49,6 +49,20 @@ defmodule Dingleberry.Signals do
     end
   end
 
+  @doc "Emit an llm.classified signal when the LLM classifier makes a decision."
+  def emit_llm_classified(attrs) do
+    case LLMClassified.new(normalize(attrs)) do
+      {:ok, signal} ->
+        signal = attach_audit_context(signal, attrs)
+        signal = attach_llm_classification(signal, attrs)
+        BusConfig.publish(signal)
+
+      {:error, reason} ->
+        Logger.warning("Failed to create llm_classified signal: #{inspect(reason)}")
+        :ok
+    end
+  end
+
   defp attach_audit_context(signal, attrs) do
     attrs = normalize(attrs)
     audit_context = %{
@@ -69,6 +83,21 @@ defmodule Dingleberry.Signals do
 
   defp generate_request_id do
     Base.hex_encode32(:crypto.strong_rand_bytes(8), case: :lower, padding: false)
+  end
+
+  defp attach_llm_classification(signal, attrs) do
+    attrs = normalize(attrs)
+    llm_meta = %{
+      model: Map.get(attrs, :model) || Map.get(attrs, "model") || "unknown",
+      confidence: Map.get(attrs, :confidence) || Map.get(attrs, "confidence") || 0.0,
+      reason: Map.get(attrs, :reason) || Map.get(attrs, "reason") || "",
+      latency_ms: Map.get(attrs, :latency_ms) || Map.get(attrs, "latency_ms"),
+      cached: Map.get(attrs, :cached) || Map.get(attrs, "cached") || false
+    }
+
+    Map.update(signal, :extensions, %{"llm.classification" => llm_meta}, fn exts ->
+      Map.put(exts || %{}, "llm.classification", llm_meta)
+    end)
   end
 
   defp normalize(attrs) when is_map(attrs), do: attrs

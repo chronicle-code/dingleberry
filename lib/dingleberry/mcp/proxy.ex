@@ -70,7 +70,12 @@ defmodule Dingleberry.MCP.Proxy do
   defp intercept_tool_call(message, state) do
     {:ok, tool_info} = Codec.extract_tool_info(message)
     description = Codec.tool_call_description(tool_info)
-    {:ok, risk, rule_name} = PolicyEngine.classify(description, scope: :mcp)
+
+    {risk, rule_name, llm_analysis} =
+      case PolicyEngine.classify(description, scope: :mcp) do
+        {:ok, risk, rule_name, llm_analysis} -> {risk, rule_name, llm_analysis}
+        {:ok, risk, rule_name} -> {risk, rule_name, nil}
+      end
 
     # Emit intercepted signal through the Jido signal bus
     Signals.emit_intercepted(%{
@@ -109,11 +114,11 @@ defmodule Dingleberry.MCP.Proxy do
         {:respond, error}
 
       :warn ->
-        request_approval(message, description, rule_name, state)
+        request_approval(message, description, rule_name, llm_analysis, state)
     end
   end
 
-  defp request_approval(message, description, rule_name, state) do
+  defp request_approval(message, description, rule_name, llm_analysis, state) do
     request =
       Request.new(
         command: description,
@@ -121,7 +126,8 @@ defmodule Dingleberry.MCP.Proxy do
         risk: :warn,
         matched_rule: rule_name,
         session_id: state.session_id,
-        timeout_seconds: state.config.approval_timeout_seconds
+        timeout_seconds: state.config.approval_timeout_seconds,
+        llm_analysis: llm_analysis
       )
 
     if state.config.desktop_notifications do
