@@ -13,7 +13,8 @@ defmodule Dingleberry.Approval.Request do
     :timestamp,
     :session_id,
     :metadata,
-    :timeout_at
+    :timeout_at,
+    :llm_analysis
   ]
 
   @type t :: %__MODULE__{
@@ -25,7 +26,8 @@ defmodule Dingleberry.Approval.Request do
           timestamp: DateTime.t(),
           session_id: String.t() | nil,
           metadata: map() | nil,
-          timeout_at: DateTime.t() | nil
+          timeout_at: DateTime.t() | nil,
+          llm_analysis: map() | nil
         }
 
   def new(attrs) do
@@ -41,7 +43,8 @@ defmodule Dingleberry.Approval.Request do
       timestamp: now,
       session_id: Keyword.get(attrs, :session_id),
       metadata: Keyword.get(attrs, :metadata),
-      timeout_at: DateTime.add(now, timeout_seconds, :second)
+      timeout_at: DateTime.add(now, timeout_seconds, :second),
+      llm_analysis: Keyword.get(attrs, :llm_analysis)
     }
   end
 end

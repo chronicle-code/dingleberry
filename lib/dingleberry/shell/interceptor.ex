@@ -56,14 +56,23 @@ defmodule Dingleberry.Shell.Interceptor do
   end
 
   def handle_call({:classify, command}, _from, state) do
-    {:ok, risk, rule_name} = PolicyEngine.classify(command, scope: :shell)
-    {:reply, {:ok, risk, rule_name}, state}
+    case PolicyEngine.classify(command, scope: :shell) do
+      {:ok, risk, rule_name, _llm_analysis} ->
+        {:reply, {:ok, risk, rule_name}, state}
+
+      {:ok, risk, rule_name} ->
+        {:reply, {:ok, risk, rule_name}, state}
+    end
   end
 
   # Private
 
   defp do_execute(command, state) do
-    {:ok, risk, rule_name} = PolicyEngine.classify(command, scope: :shell)
+    {risk, rule_name, llm_analysis} =
+      case PolicyEngine.classify(command, scope: :shell) do
+        {:ok, risk, rule_name, llm_analysis} -> {risk, rule_name, llm_analysis}
+        {:ok, risk, rule_name} -> {risk, rule_name, nil}
+      end
 
     # Emit intercepted signal through the Jido signal bus
     Signals.emit_intercepted(%{
@@ -94,11 +103,11 @@ defmodule Dingleberry.Shell.Interceptor do
         {:blocked, "Command blocked by policy: #{rule_name}"}
 
       :warn ->
-        request_and_maybe_execute(command, rule_name, state)
+        request_and_maybe_execute(command, rule_name, llm_analysis, state)
     end
   end
 
-  defp request_and_maybe_execute(command, rule_name, state) do
+  defp request_and_maybe_execute(command, rule_name, llm_analysis, state) do
     request =
       Request.new(
         command: command,
@@ -106,7 +115,8 @@ defmodule Dingleberry.Shell.Interceptor do
         risk: :warn,
         matched_rule: rule_name,
         session_id: state.session_id,
-        timeout_seconds: state.config.approval_timeout_seconds
+        timeout_seconds: state.config.approval_timeout_seconds,
+        llm_analysis: llm_analysis
       )
 
     if state.config.desktop_notifications do

@@ -29,7 +29,12 @@ defmodule Dingleberry.Actions.ClassifyCommand do
 
   @impl true
   def run(params, _context) do
-    {:ok, risk, rule_name} = PolicyEngine.classify(params.command, scope: params.scope)
-    {:ok, %{risk: risk, rule_name: rule_name, command: params.command}}
+    case PolicyEngine.classify(params.command, scope: params.scope) do
+      {:ok, risk, rule_name, _llm_analysis} ->
+        {:ok, %{risk: risk, rule_name: rule_name, command: params.command}}
+
+      {:ok, risk, rule_name} ->
+        {:ok, %{risk: risk, rule_name: rule_name, command: params.command}}
+    end
   end
 end

@@ -14,7 +14,9 @@ defmodule Dingleberry.Config do
     :policy_path,
     :approval_timeout_seconds,
     :log_level,
-    :desktop_notifications
+    :desktop_notifications,
+    llm_classification: nil,
+    llm_policies: []
   ]
 
   def config_dir, do: @config_dir
@@ -59,7 +61,9 @@ defmodule Dingleberry.Config do
       policy_path: Map.get(yaml, "policy_path", @default_policy_file),
       approval_timeout_seconds: Map.get(yaml, "approval_timeout_seconds", 120),
       log_level: Map.get(yaml, "log_level", "info") |> String.to_atom(),
-      desktop_notifications: Map.get(yaml, "desktop_notifications", true)
+      desktop_notifications: Map.get(yaml, "desktop_notifications", true),
+      llm_classification: Map.get(yaml, "llm_classification"),
+      llm_policies: Map.get(yaml, "llm_policies", [])
     }
   end
 
@@ -70,7 +74,9 @@ defmodule Dingleberry.Config do
       policy_path: @default_policy_file,
       approval_timeout_seconds: 120,
       log_level: :info,
-      desktop_notifications: true
+      desktop_notifications: true,
+      llm_classification: nil,
+      llm_policies: []
     }
   end
 end

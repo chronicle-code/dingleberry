@@ -7,6 +7,9 @@ defmodule Dingleberry.Application do
 
   @impl true
   def start(_type, _args) do
+    # Initialize LLM classification cache (ETS table)
+    Dingleberry.LLM.Classifier.init_cache()
+
     children = [
       DingleberryWeb.Telemetry,
       Dingleberry.Repo,

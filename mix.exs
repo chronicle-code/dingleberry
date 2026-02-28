@@ -67,6 +67,7 @@ defmodule Dingleberry.MixProject do
       {:jido, "~> 2.0"},
       {:jido_action, "~> 2.0"},
       {:jido_signal, "~> 2.0"},
+      {:jido_ai, "~> 2.0.0-rc.0"},
       # Dingleberry-specific deps
       {:yaml_elixir, "~> 2.11"},
       {:uniq, "~> 0.6"}

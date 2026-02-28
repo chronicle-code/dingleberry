@@ -24,7 +24,13 @@ defmodule Dingleberry.Actions.ClassifyToolCall do
   def run(params, _context) do
     tool_info = %{name: params.name, arguments: params.arguments}
     description = Codec.tool_call_description(tool_info)
-    {:ok, risk, rule_name} = PolicyEngine.classify(description, scope: :mcp)
-    {:ok, %{risk: risk, rule_name: rule_name, description: description}}
+
+    case PolicyEngine.classify(description, scope: :mcp) do
+      {:ok, risk, rule_name, _llm_analysis} ->
+        {:ok, %{risk: risk, rule_name: rule_name, description: description}}
+
+      {:ok, risk, rule_name} ->
+        {:ok, %{risk: risk, rule_name: rule_name, description: description}}
+    end
   end
 end
